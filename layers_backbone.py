@@ -124,9 +124,9 @@ def main():
     ap.add_argument("--batch_size", type=int, default=32)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--out_dir", default="layers_vit")
-    ap.add_argument("--no_patch", action="store_true", help="skip our patch-matching rows (OSLO only; faster)")
+    ap.add_argument("--no_patch", action="store_true", help="skip our patch-matching rows (OSLO only)")
     ap.add_argument("--roundtrip", action="store_true",
-                    help="also save the round-trip score R(L) of every layer per episode (for fig_depth_backbones.py)")
+                    help="also save the round-trip score R(L) of every layer per episode")
     args = ap.parse_args()
     assert not (args.roundtrip and args.no_patch), "--roundtrip needs the patch tokens: drop --no_patch"
 
