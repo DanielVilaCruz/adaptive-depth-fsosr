@@ -11,8 +11,8 @@ import torch.nn.functional as F
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-import common                                                   
-from baselines import bl_args, bl_oslo, run_baselines            
+import common                                                    
+from baselines import bl_args, bl_oslo, run_baselines             
 
 COLS = ("acc", "auroc", "fpr95", "oscr")
 U_PCT, U_MAX, BETA = 20.0, 0.5, 1.0 # Unknown bank (Sec. 2.3), fixed for every dataset
@@ -25,7 +25,7 @@ def l2(x):
 # Features
 @torch.no_grad()
 def extract(model, x, src, bs, device):
-    G = 1 + model.num_register_tokens                   
+    G = 1 + model.num_register_tokens                 
     out = defaultdict(list)
     for i in range(0, len(x), bs):
         t = model.prepare_tokens_with_masks(x[i:i + bs].to(device))
@@ -68,7 +68,7 @@ def patch_scores(qp, sp, sup_y, C, chunk=8):
     def score(xp, exclude=None):
         out = []
         for i in range(0, len(xp), chunk):
-            sim = (norm(xp[i:i + chunk]) @ bank.T).float()                
+            sim = (norm(xp[i:i + chunk]) @ bank.T).float()                 
             if exclude is not None:
                 ex = exclude[i:i + chunk]
                 sim = sim.masked_fill((owner[None, :] == ex[:, None])[:, None, :], float("-inf"))
@@ -94,7 +94,7 @@ def roundtrip_score(sp, qp, sup_y, C, k_shot, keep=0.5):
     m = max(1, int(round(keep * Q / C)))
     taken = np.zeros(Q, bool)
     idx, lab = [], []
-    for c in range(C):                                  
+    for c in range(C):                                   
         mc = Dq[:, c] - np.delete(Dq, c, axis=1).max(1)
         mc[taken] = -np.inf
         top = np.argsort(-mc)[:m]
@@ -102,7 +102,7 @@ def roundtrip_score(sp, qp, sup_y, C, k_shot, keep=0.5):
         idx += top.tolist()
         lab += [c] * len(top)
     bank = qp[torch.as_tensor(idx, device=qp.device)]
-    Db = patch_scores(sp, bank, np.array(lab), C)[0]     
+    Db = patch_scores(sp, bank, np.array(lab), C)[0]    
     own = Db[np.arange(len(sup_y)), sup_y]
     other = np.where(np.eye(C, dtype=bool)[sup_y], -np.inf, Db).max(1)
     return float((Db.argmax(1) == sup_y).mean()), float((own - other).mean() / (Db.std() + 1e-12)), Dq
@@ -131,7 +131,7 @@ def choose_depth(base, model, args, tf, device, n_unk, test_index):
         r = roundtrip_all(model, base.load_batch(sup, tf), sup_y, base.load_batch(qry, tf), args.cands,
                           args.batch_size, device)
         rt.append([r[L][:2] for L in args.cands])
-        if args.depth_by == "acc":                      
+        if args.depth_by == "acc":                       
             y = np.asarray(q_y)
             k = y >= 0
             acc.append([float((np.round(r[L][2], 5).argmax(1)[k] == y[k]).mean()) for L in args.cands])
@@ -155,7 +155,7 @@ def knownness(zq, zs, sup_y, C, U=None):
     r = D.max(1)
     if U is not None and len(U):
         sim = zq @ zq[U].T
-        sim[U, np.arange(len(U))] = -np.inf # Query with itself
+        sim[U, np.arange(len(U))] = -np.inf             
         m = sim.max(1)
         m = np.where(np.isfinite(m), m, -np.inf)
         r = r - BETA * np.maximum(0.0, m - (zq @ zs.T).max(1))
@@ -263,7 +263,7 @@ def rank(v):
 
 
 def evaluate_pred(base, pred, score, q_y, C):
-    return base.evaluate(-np.eye(C)[pred], q_y, score=score)     
+    return base.evaluate(-np.eye(C)[pred], q_y, score=score)      
 
 
 # Episode
@@ -287,7 +287,7 @@ def run_episode(base, model, args, sup_x, sup_y, q_x, q_y, C, device):
         D12, u12 = bl_oslo(zq12, zs12, sup_y, C)
         res["Ours + OSLO@L12 (fusion)"] = base.evaluate(-(zrow(a) + zrow(-D12)), q_y, score=(rank(u_a) + rank(u12)) / 2)
         cat = lambda x, y: np.concatenate([l2(x), l2(y)], 1)
-        b, u_b = bl_oslo(cat(zqs, zq12), cat(zss, zs12), sup_y, C)          # Expert B
+        b, u_b = bl_oslo(cat(zqs, zq12), cat(zss, zs12), sup_y, C)       
         res["OSLO on L*+L12"] = base.evaluate(b, q_y, score=u_b)
         res["Ours + OSLO on L*+L12 (fusion)"] = base.evaluate(-(zrow(a) + zrow(-b)), q_y,
                                                               score=(rank(u_a) + rank(u_b)) / 2)
@@ -299,9 +299,6 @@ def run_episode(base, model, args, sup_x, sup_y, q_x, q_y, C, device):
         run_baselines(bl_args(args), {("pmean", L): (q["A"][:, L - 1], s["A"][:, L - 1])},
                            sup_y, q_y, C, None, depth, bl_res, {})
         res.update({k.replace(f"pmean@L{L}", tag): v for k, v in bl_res.items()})
-        if "oslo" in args.baselines.split(","):
-            D, sc = bl_oslo(base._np64(q["A"][:, L - 1]), base._np64(s["A"][:, L - 1]), sup_y, C)
-            res[f"{tag}:oslo[T]"] = base.evaluate(D, q_y, score=sc)
     return res, src, ({int(L): [float(v) for v in rt[L][:2]] for L in rt} if rt else None)
 
 
@@ -312,7 +309,7 @@ def run_setting(base, model, args, index, tf, device, n_unk):
         L, depth_info = choose_depth(base, model, args, tf, device, n_unk, index)
         args.src = str(L)
     try:
-        rng = random.Random(args.seed)                   
+        rng = random.Random(args.seed)                  
         agg = defaultdict(lambda: defaultdict(list))
         chosen, rts = [], []
         for ep in range(args.episodes):
@@ -347,7 +344,7 @@ def run_setting(base, model, args, index, tf, device, n_unk):
 
 
 def main():
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], formatter_class=argparse.RawTextHelpFormatter)
+    ap = argparse.ArgumentParser(description="Which layer to read? Adaptive depth for training-free few-shot open-set recognition", formatter_class=argparse.RawTextHelpFormatter)
     ap.add_argument("--data_root", required=True, nargs="+",
                     help="dataset folders (a test/ subfolder is used if present); with several, results go to "
                          "<out_dir>/<folder name>/")
