@@ -31,7 +31,7 @@ works on a frozen DINOv2 ViT-B/14 with registers, with no gradients and no per-d
 1) Clone the repository
     ```bash
     git clone https://github.com/DanielVilaCruz/adaptive-depth-fsosr.git
-    cd which-layer-fsosr
+    cd adaptive-depth-fsosr
     ```
 2) Install PyTorch
 
